@@ -1,12 +1,10 @@
 ﻿#Install-Module -Name xDSCResourceDesigner
-$name = New-xDscResourceProperty -Name Name -Type String -Attribute key   -Description 'Name of the WinRM listener'
+$protocol = New-xDscResourceProperty -Name Protocol -Type String -Attribute key -Description 'Listener protocol' -ValidateSet ('HTTP','HTTPS')
 $ensure = New-xDscResourceProperty -Name Ensure -Type String -Attribute Write -ValidateSet @('Present', 'Absent') -Description 'Ensure'
 
 $basicservice = New-xDscResourceProperty -Name Service_Basic -Type Boolean -Attribute Write -Description 'Enable or disable basic auth for the WinRM service'
 $basicclient = New-xDscResourceProperty -Name Client_Basic -Type Boolean -Attribute Write -Description 'Enable or disable basic auth for the WinRM client'
 
-
-$digestservice = New-xDscResourceProperty -Name Service_Digest -Type Boolean -Attribute Write -Description 'Enable or disable digest auth for the WinRM service'
 $digestclient = New-xDscResourceProperty -Name Client_Digest -Type Boolean -Attribute Write -Description 'Enable or disable digest auth for the WinRM client'
 
 $kerberossevice = New-xDscResourceProperty -Name Service_Kerberos -Type Boolean -Attribute Write -Description 'Enable or disable kerberos auth for the WinRM service'
@@ -38,7 +36,7 @@ $HTTPSCert = New-xDscResourceProperty -Name HTTPSCertThumpprint -Type String -At
 
 
 $module = New-xDscResource -Name xWinRM `
--Property $name, $ensure, $basicservice, $basicclient, $digestservice, $digestclient, $kerberossevice, $kerberosclient, $negotiateservice, $negotiateclient, $certificateservice, $certificateclient, $credsspservice, $credsspclient, $allowunencryptedservice, $allowunencryptedclient, $httpport, $httpsport, `
+-Property $protocol, $ensure, $basicservice, $basicclient, $digestclient, $kerberossevice, $kerberosclient, $negotiateservice, $negotiateclient, $certificateservice, $certificateclient, $credsspservice, $credsspclient, $allowunencryptedservice, $allowunencryptedclient, $httpport, $httpsport, `
 $MaxEnvelopeSizekb,$MaxTimeoutms, $MaxBatchItems, $MaxProviderRequests, $MaxMemoryPerShellMB, $HTTPSCert `
 -FriendlyName 'xWinRM' `
 -ModuleName 'xWinRM' `
