@@ -1,143 +1,80 @@
 ﻿#requires -Version 1.0
 Import-Module -Name .\DSCResources\xWinRM\xWinRM.psm1
 
+$WarningPreference = 'silentlycontinue'
+
 $Global:DSCModuleName      = 'xWinRM'
 $Global:DSCResourceName    = 'xWinRM'
 
-InModuleScope -ModuleName XDSCFirewall -ScriptBlock {
-  $Firewall = New-Object -TypeName PSObject -Property @{
-    Enabled               = $true
-    LogAllowed            = $false
-    LogBlocked            = $true
-    LogIgnored            = 'NotConfigured'
-    LogMaxSizeKilobytes   = '4096'
-    DefaultInboundAction  = 'Block'
-    DefaultOutboundAction = 'Allow'
-  }
-
-  Describe -Name 'Testing if functions return correct objects' -Fixture {
+InModuleScope -ModuleName xWinRM -ScriptBlock {
+  Describe -Name "Testing if $($Global:DSCResourceName)\Get-TargetResource and $($Global:DSCResourceName)\Test-TargetResource return correct objects" -Fixture {
     It -name 'Get-TargetResource returns a hashtable' -test {
-      Get-TargetResource -Zone Public -Ensure Present | Should Be 'System.Collections.Hashtable'
+      Get-TargetResource -Protocol HTTP -Ensure Present | Should Be 'System.Collections.Hashtable'
     }
 
     It -name 'Test-TargetResource returns true or false' -test {
-      (Test-TargetResource -Zone Public -Ensure 'Present').GetType() -as [string] | Should Be 'bool'
+      (Test-TargetResource -Protocol HTTP -Ensure Present).GetType() -as [string] | Should Be 'bool'
     }
   }
-
-  Describe -Name "$($Global:DSCResourceName)\Get-TargetResource" -Fixture {
-    $Firewall.Enabled = $false
-    Mock -CommandName Get-NetFirewallProfile -MockWith {
-      $Firewall
-    }
-    It -name 'Firewall disabled Get-TargetResource should return absent in hash table' -test {
-      (Get-TargetResource -Zone Public -Ensure Present).Ensure | Should Be 'Absent'
-    }
-
-    $Firewall.Enabled = $true
-    Mock -CommandName Get-NetFirewallProfile -MockWith {
-      $Firewall
-    }
-    It -name 'Firewall enabled Get-TargetResource should return present in hash table' -test {
-      (Get-TargetResource -Zone Public -Ensure Present).Ensure | Should Be 'Present'
-    }
-  }
-  Describe -Name "Disabling Firewall with $($Global:DSCResourceName)\Set-TargetResource" -Fixture {
-    It -name 'Disabling firewall and configuring with values' -test {
-      Set-TargetResource -Zone Public -Ensure Absent -LogAllowed False -LogBlocked True -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Allow
-    }
-    Context -Name "Testing ensure/absent logic for $($Global:DSCResourceName)\Test-TargetResource on a disabled firewall zone" -Fixture {
-      It -name 'Testing Test-TargetResource present logic should return false' -test {
-        Test-TargetResource -Zone Public -Ensure Present -LogBlocked True -LogAllowed False -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'False'
+  Describe -Name "$($Global:DSCResourceName)\Set-TargetResource" -Fixture {
+    Context -Name "Testing $($Global:DSCResourceName)\Set-TargetResource logic for ensure = present" -Fixture {   
+      It -name 'Configuring WinRM HTTP listener' -test {
+        Set-TargetResource -Protocol HTTP -Ensure Present -HttpPort 6000 -Service_AllowUnencrypted false
       }
-      It -name 'Testing Test-TargetResource absent logic should return true' -test {
-        Test-TargetResource -Zone Public -Ensure Absent -LogBlocked True -LogAllowed False -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'True'
+      It -name 'Configuring WinRM HTTSP listener' -test {
+        Set-TargetResource -Protocol HTTPS -Ensure Present -Service_AllowUnencrypted false -HttpsPort 6005
       }
     }
-    Context -Name "Testing $($Global:DSCResourceName)\Test-TargetResource operater logic for absent" -Fixture {
-      It -name "LogBlocked shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Absent -LogBlocked False -LogAllowed False -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'False'
+    Context -Name "Testing $($Global:DSCResourceName)\Set-TargetResource results" -Fixture {   
+      It -name 'WinRM HTTP listener port should be 6000' -test {
+        (Get-TargetResource -Protocol HTTP -Ensure Present).HttpPort| Should be 6000
       }
-      It -name "LogAllowed shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Absent -LogBlocked True -LogAllowed True -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'False'
+      It -name 'WinRM HTTPS listener port should be 6005' -test {
+        (Get-TargetResource -Protocol HTTPS -Ensure Present).HttpsPort| Should be 6005
       }
-      It -name "LogIgnored shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Absent -LogAllowed False -LogBlocked True -LogIgnored False -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'False'
+      It -name 'WinRM service Basic auth should be true' -test {
+        (Get-TargetResource -Protocol HTTPS -Ensure Present).Service_Basic | Should be 'true'
       }
-      It -name "LogMaxSizeKilobytes shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Absent -LogAllowed False -LogBlocked True -LogIgnored NotConfigured -LogMaxSizeKilobytes 1024 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'False'
+      It -name 'WinRM client Basic auth should be true' -test {
+        (Get-TargetResource -Protocol HTTPS -Ensure Present).Client_Basic| Should be 'true'
       }
-      It -name "DefaultInboundAction shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Absent -LogAllowed False -LogBlocked True -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Allow -DefaultOutboundAction Allow | Should Be 'False'
+      It -name 'WinRM service Kerberos auth should be true' -test {
+        (Get-TargetResource -Protocol HTTPS -Ensure Present).Service_Basic | Should be 'true'
       }
-      It -name "DefaultInboundAction shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Absent -LogAllowed False -LogBlocked True -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Block | Should Be 'False'
+      It -name 'WinRM client Kerberos auth should be true' -test {
+        (Get-TargetResource -Protocol HTTPS -Ensure Present).Client_Kerberos | Should be 'true'
       }
-    }
-  }
-  Describe -Name "Enabling Firewall with $($Global:DSCResourceName)\Set-TargetResource" -Fixture {
-    It -name 'Enabling firewall and configuring with values' -test {
-      Set-TargetResource -Zone Public -Ensure Present -LogAllowed False -LogBlocked True -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Allow
-    }
-    Context -Name 'Testing ensure/absent logic for Test-TargetResource on a enabled firewall zone' -Fixture {
-      It -name 'Testing Test-TargetResource present logic should return true' -test {
-        Test-TargetResource -Zone Public -Ensure Present -LogAllowed False -LogBlocked True -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'true'
+      It -name 'WinRM service Kerberos auth should be true' -test {
+        (Get-TargetResource -Protocol HTTPS -Ensure Present).Service_Kerberos | Should be 'true'
       }
-      It -name 'Testing Test-TargetResource absent logic should return false' -test {
-        Test-TargetResource -Zone Public -Ensure Absent -LogBlocked True -LogAllowed False -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'false'
+      It -name 'WinRM client Negotiate auth should be true' -test {
+        (Get-TargetResource -Protocol HTTPS -Ensure Present).Client_Negotiate | Should be 'true'
       }
-    }
-    Context -Name "Testing $($Global:DSCResourceName)\Test-TargetResource operater logic for present" -Fixture {
-      It -name "LogBlocked shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Present -LogBlocked False -LogAllowed False -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'False'
+      It -name 'WinRM service Negotiate auth should be true' -test {
+        (Get-TargetResource -Protocol HTTPS -Ensure Present).Service_Negotiate  | Should be 'true'
       }
-      It -name "LogAllowed shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Present -LogBlocked True -LogAllowed True -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'False'
+      It -name 'WinRM client basic auth should be true' -test {
+        (Get-TargetResource -Protocol HTTPS -Ensure Present).Client_Basic| Should be 'true'
       }
-      It -name "LogIgnored shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Present -LogAllowed False -LogBlocked True -LogIgnored False -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'False'
+      It -name 'WinRM service Certificate auth should be true' -test {
+        (Get-TargetResource -Protocol HTTPS -Ensure Present).Service_Certificate | Should be 'false'
       }
-      It -name "LogMaxSizeKilobytes shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Present -LogAllowed False -LogBlocked True -LogIgnored NotConfigured -LogMaxSizeKilobytes 1024 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'False'
+      It -name 'WinRM client Certificate auth should be true' -test {
+        (Get-TargetResource -Protocol HTTPS -Ensure Present).Client_Certificate | Should be 'true'
       }
-      It -name "DefaultInboundAction shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Present -LogAllowed False -LogBlocked True -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Allow -DefaultOutboundAction Allow | Should Be 'False'
+      It -name 'WinRM service CredSSP auth should be true' -test {
+        (Get-TargetResource -Protocol HTTPS -Ensure Present).Service_CredSSP | Should be 'false'
       }
-      It -name "DefaultInboundAction shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Present -LogAllowed False -LogBlocked True -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Block | Should Be 'False'
+      It -name 'WinRM client CredSSP auth should be true' -test {
+        (Get-TargetResource -Protocol HTTPS -Ensure Present).Client_CredSSP | Should be 'false'
       }
     }
-  }
-  Describe -Name "Setting firewall back to defaults with $($Global:DSCResourceName)\Set-TargetResource" -Fixture {
-    It -name 'Enabling firewall with default values' -test {
-      Set-TargetResource -Zone Public -Ensure Present -LogAllowed False -LogBlocked False -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction NotConfigured -DefaultOutboundAction NotConfigured
-    }
-    Context -Name "Testing ensure/absent logic for $($Global:DSCResourceName)\Test-TargetResource on a enabled firewall zone" -Fixture {
-      It -name 'Testing Test-TargetResource present logic should return true' -test {
-        Test-TargetResource -Zone Public -Ensure Present -LogAllowed False -LogBlocked False -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction NotConfigured -DefaultOutboundAction NotConfigured | Should Be 'true'
+    Context -Name "Testing $($Global:DSCResourceName)\Test-TargetResource results" -Fixture {   
+      It -name 'Test-TargetResource returns true' -test {
+        Test-TargetResource -Protocol HTTP -Ensure Present -Service_AllowUnencrypted false -HttpPort 6000 | Should Be $true
       }
-      It -name 'Testing Test-TargetResource absent logic should return false' -test {
-        Test-TargetResource -Zone Public -Ensure Absent -LogAllowed False -LogBlocked False -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction NotConfigured -DefaultOutboundAction NotConfigured | Should Be 'false'
-      }
-    }
-    Context -Name "Testing $($Global:DSCResourceName)\Test-TargetResource operater logic for present" -Fixture {
-      It -name "LogBlocked shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Present -LogBlocked False -LogAllowed False -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'False'
-      }
-      It -name "LogAllowed shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Present -LogBlocked True -LogAllowed True -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'False'
-      }
-      It -name "LogIgnored shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Present -LogAllowed False -LogBlocked True -LogIgnored False -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'False'
-      }
-      It -name "LogMaxSizeKilobytes shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Present -LogAllowed False -LogBlocked True -LogIgnored NotConfigured -LogMaxSizeKilobytes 1024 -DefaultInboundAction Block -DefaultOutboundAction Allow | Should Be 'False'
-      }
-      It -name "DefaultInboundAction shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Present -LogAllowed False -LogBlocked True -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Allow -DefaultOutboundAction Allow | Should Be 'False'
-      }
-      It -name "DefaultInboundAction shouldn't match so should return false" -test {
-        Test-TargetResource -Zone Public -Ensure Present -LogAllowed False -LogBlocked True -LogIgnored NotConfigured -LogMaxSizeKilobytes 4096 -DefaultInboundAction Block -DefaultOutboundAction Block | Should Be 'False'
+      It -name 'Test-TargetResource returns true' -test {
+        Test-TargetResource -Protocol HTTPS -Ensure Present -Service_AllowUnencrypted false -HttpsPort 6005 | Should Be $true
       }
     }
   }
