@@ -10,7 +10,7 @@ skip_commits:
 #      environment configuration  #
 #---------------------------------#
 version: '1.0.{build}'
-os: WMF 5
+os: 'Windows Server 2016'
 pull_requests:
   do_not_increment_build_number: true
 environment:
