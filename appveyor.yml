@@ -49,7 +49,7 @@ deploy_script:
         Write-Verbose -Message 'Creating project artifact' -Verbose
         $stagingDirectory = (Resolve-Path -Path ..).Path
         $manifest = Join-Path -Path $pwd -ChildPath '*.psd1' -Resolve
-        Update-ModuleManifest -path $manifest -ModuleVersion $env:APPVEYOR_BUILD_VERSION
+        Update-ModuleManifest -path $manifest -ModuleVersion $env:APPVEYOR_BUILD_VERSION -Author 'Anthony Waye' -Copyright '(c) 2017 Anthony. All rights reserved.' -Description 'Early version of my DSC module to configure WinRM based settings along with the HTTP and HTTPS listeners' -PowerShellVersion '5.0' -ProjectUri 'https://github.com/theonlyway/xWinRM'
         $zipFilePath = Join-Path -Path $stagingDirectory -ChildPath "$env:APPVEYOR_PROJECT_NAME-$env:APPVEYOR_BUILD_VERSION.zip"
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         [System.IO.Compression.ZipFile]::CreateFromDirectory($pwd, $zipFilePath)
