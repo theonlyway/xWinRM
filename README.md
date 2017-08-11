@@ -5,7 +5,7 @@
 # xWinRM #
 ## Overview ##
 
-This custom resource enables or disables WinRM. In addition it can configure values for the service or client etc as well as configure both not only the HTTP listener but the HTTPS listener. It can configure the HTTPS with a generated self signed certificate or use one you have provided.
+This custom resource enables or disables WinRM. In addition it can configure values for the service or client etc as well as configure both not only the HTTP listener but the HTTPS listener. It can configure the HTTPS listener with a self signed certificate or use one you have provided.
 
 ### Parameters ###
 
