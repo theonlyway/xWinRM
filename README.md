@@ -37,10 +37,9 @@ This custom resource enables or disables WinRM. In addition it can configure val
 
 **HTTPSCertThumpprint**
 
-- true - Enable basic authentication for the WinRM service
-- false - Disable basic authenticaiton for the WinRM service
+- If you supply a thumbprint it will configure the HTTPS listener with the thumbprint. However, if you don't specify one it will create an self-signed certificate that is valid for 10 years and is non-exportable.
 
-The default value is **true**
+The default value is **self**
 
 **Service_Basic**
 
@@ -152,3 +151,19 @@ The default value is **false**
 **MaxMemoryPerShellMB**
 
 - 1024 - Set the max memory per shell for the WinRM service
+
+### Example ###
+
+    xWinRM WinRMHTTPS
+    {
+      Protocol = "HTTPS"
+      Ensure = "Present"
+      Service_AllowUnencrypted = 'false'
+	  HTTPSCertThumpprint = 'BDFCF01AF7996427D93A84D016527E534D4E95DA'
+    }
+
+# Versions
+
+## 1.0.8
+First buildable version
+
