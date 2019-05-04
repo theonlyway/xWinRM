@@ -152,6 +152,11 @@ The default value is **false**
 
 - 1024 - Set the max memory per shell for the WinRM service
 
+**RestartService**
+
+- true - Restart the WinRM service
+- false - (Default) Do not restart the WinRM service
+
 ### Example ###
 
     xWinRM WinRMHTTPS
